@@ -1,220 +1,243 @@
-import { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Camera, Upload, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Upload, Sparkles, ArrowLeft, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string;
-}
+import { toast } from 'sonner';
 
 const TryOn = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const clothInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
   
-  const [userImage, setUserImage] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [clothImage, setClothImage] = useState<string | null>(null);
+  const [modelImage, setModelImage] = useState<string | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    async function fetchProducts() {
-      const { data } = await supabase.from('products').select('id, name, price, image_url').limit(6);
-      if (data) setProducts(data);
-    }
-
-    async function fetchSelectedProduct() {
-      const productId = searchParams.get('product');
-      if (productId) {
-        const { data } = await supabase.from('products').select('id, name, price, image_url').eq('id', productId).maybeSingle();
-        if (data) setSelectedProduct(data);
-      }
-    }
-
-    fetchProducts();
-    fetchSelectedProduct();
-  }, [searchParams]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setImage: (img: string | null) => void
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be less than 5MB');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
-        setUserImage(e.target?.result as string);
+        setImage(e.target?.result as string);
+        setResultImage(null); // Clear previous result
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleTryOn = async () => {
-    if (!user) {
-      navigate('/auth');
+    if (!clothImage || !modelImage) {
+      toast.error('Please upload both cloth and model images');
       return;
     }
     
-    if (!userImage || !selectedProduct) return;
-    
     setIsProcessing(true);
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
+    setResultImage(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('virtual-try-on', {
+        body: { clothImage, modelImage }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.success && data.resultImage) {
+        setResultImage(data.resultImage);
+        toast.success('Try-on complete!');
+      } else {
+        toast.error(data.message || 'Could not generate result. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Try-on error:', error);
+      toast.error(error.message || 'Failed to process. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  const UploadBox = ({
+    label,
+    image,
+    inputRef,
+    onClear
+  }: {
+    label: string;
+    image: string | null;
+    inputRef: React.RefObject<HTMLInputElement>;
+    onClear: () => void;
+  }) => (
+    <div className="flex flex-col items-center gap-3">
+      <h3 className="font-medium text-foreground">{label}</h3>
+      <div
+        className="relative w-full max-w-sm aspect-[3/4] bg-secondary/30 rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+        onClick={() => inputRef.current?.click()}
+      >
+        {image ? (
+          <>
+            <img src={image} alt={label} className="w-full h-full object-cover" />
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute top-2 right-2 rounded-full h-8 w-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Choose File</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-12">
+      <div className="min-h-screen bg-background">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Virtual Try-On
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Upload your photo and see how our collection looks on you with AI-powered visualization.
-          </p>
-        </motion.div>
+        <div className="container mx-auto px-4 py-6">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Store
+          </button>
+        </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        {/* Main Content */}
+        <div className="container mx-auto px-4 pb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-10"
+          >
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Virtual Cloth Assistant
+            </h1>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Wanna try out how that cloth suits you?
+              <br />
+              Upgrade your shopping experience with an intelligent trial room.
+            </p>
+            <div className="w-16 h-1 bg-primary mx-auto mt-6" />
+          </motion.div>
+
           {/* Upload Section */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="space-y-6"
+            className="max-w-4xl mx-auto"
           >
-            <h2 className="font-display text-2xl font-semibold text-foreground">
-              1. Upload Your Photo
-            </h2>
-            
-            <div 
-              className="relative aspect-[3/4] bg-secondary/50 rounded-2xl border-2 border-dashed border-border overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {userImage ? (
-                <>
-                  <img src={userImage} alt="Your photo" className="w-full h-full object-cover" />
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="absolute top-4 right-4 rounded-full"
-                    onClick={(e) => { e.stopPropagation(); setUserImage(null); }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <Camera className="h-10 w-10 text-primary" />
-                  </div>
-                  <p className="font-medium text-foreground mb-2">Upload your photo</p>
-                  <p className="text-sm text-muted-foreground">Click to browse or drag and drop</p>
-                </div>
-              )}
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <UploadBox
+                label="Cloth Image"
+                image={clothImage}
+                inputRef={clothInputRef}
+                onClear={() => {
+                  setClothImage(null);
+                  setResultImage(null);
+                }}
+              />
+              <UploadBox
+                label="Model Image"
+                image={modelImage}
+                inputRef={modelInputRef}
+                onClear={() => {
+                  setModelImage(null);
+                  setResultImage(null);
+                }}
+              />
             </div>
-            
+
             <input
-              ref={fileInputRef}
+              ref={clothInputRef}
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={handleFileSelect}
+              onChange={(e) => handleFileSelect(e, setClothImage)}
             />
-            
-            <div className="flex gap-4">
+            <input
+              ref={modelInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, setModelImage)}
+            />
+
+            {/* Try It Button */}
+            <div className="flex justify-start mb-12">
               <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => fileInputRef.current?.click()}
+                size="lg"
+                className="px-8"
+                disabled={!clothImage || !modelImage || isProcessing}
+                onClick={handleTryOn}
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Photo
+                {isProcessing ? (
+                  <>
+                    Processing...
+                    <Sparkles className="ml-2 h-5 w-5 animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    Try It
+                    <Sparkles className="ml-2 h-5 w-5" />
+                  </>
+                )}
               </Button>
             </div>
-          </motion.div>
 
-          {/* Product Selection */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-6"
-          >
-            <h2 className="font-display text-2xl font-semibold text-foreground">
-              2. Select a Product
-            </h2>
-
-            <div className="grid grid-cols-3 gap-4">
-              {products.map((product) => (
-                <button
-                  key={product.id}
-                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedProduct?.id === product.id
-                      ? 'border-primary ring-2 ring-primary/20'
-                      : 'border-transparent hover:border-primary/50'
-                  }`}
-                  onClick={() => setSelectedProduct(product)}
-                >
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-
-            {selectedProduct && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-secondary/50 rounded-xl p-4"
-              >
-                <p className="font-medium text-foreground">{selectedProduct.name}</p>
-                <p className="text-primary font-display text-lg">${selectedProduct.price.toFixed(2)}</p>
-              </motion.div>
-            )}
-
-            {/* Try On Button */}
-            <Button
-              size="lg"
-              className="w-full shadow-elegant"
-              disabled={!userImage || !selectedProduct || isProcessing}
-              onClick={handleTryOn}
+            {/* Results Section */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-center"
             >
-              {isProcessing ? (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5 animate-pulse" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Try On Now
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-
-            {!user && (
-              <p className="text-sm text-center text-muted-foreground">
-                <button onClick={() => navigate('/auth')} className="text-primary hover:underline">
-                  Sign in
-                </button>{' '}
-                to save your try-on sessions
-              </p>
-            )}
+              <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+                HERE IS YOUR RESULT
+              </h2>
+              <div className="bg-secondary/30 rounded-xl p-8 min-h-[300px] flex items-center justify-center">
+                {isProcessing ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+                    <p className="text-muted-foreground">
+                      Creating your virtual try-on...
+                    </p>
+                  </div>
+                ) : resultImage ? (
+                  <img
+                    src={resultImage}
+                    alt="Try-on result"
+                    className="max-h-[500px] rounded-lg shadow-lg"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    Upload both images and click "Try It" to see the result
+                  </p>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
