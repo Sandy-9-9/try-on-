@@ -26,7 +26,7 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Use Gemini's image generation model to create virtual try-on result
+    // Use the next-gen image model with a very specific virtual try-on prompt
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -34,14 +34,25 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
+        model: 'google/gemini-3-pro-image-preview',
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `You are a virtual try-on assistant. Take the clothing item from the first image and realistically place it on the person in the second image. Create a photorealistic result showing the person wearing the clothing item. The result should look natural and well-fitted. Maintain the person's pose, face, and body proportions. Only change their clothing to match the provided garment. Make it look like a professional fashion photo.`
+                text: `VIRTUAL TRY-ON TASK: You must generate a NEW image showing the person from the SECOND image wearing the clothing item from the FIRST image.
+
+CRITICAL INSTRUCTIONS:
+1. The FIRST image contains a CLOTHING ITEM (shirt, dress, jacket, etc.) - extract this garment
+2. The SECOND image contains a PERSON/MODEL - keep their face, body pose, skin tone, and background
+3. Generate a NEW composite image where the PERSON is wearing the CLOTHING ITEM
+4. The clothing must be realistically fitted to the person's body shape and pose
+5. Preserve the person's face, hair, arms, and legs exactly as they appear
+6. Match lighting and shadows between the garment and person
+7. The result should look like a professional fashion photo of this person wearing this exact outfit
+
+DO NOT just return one of the input images. You MUST create a merged/composite result showing the person wearing the garment.`
               },
               {
                 type: 'image_url',
@@ -64,23 +75,40 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI Gateway error:', errorText);
+      console.error('AI Gateway error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`AI Gateway returned ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('AI Gateway response:', JSON.stringify(data, null, 2));
+    console.log('AI Gateway response received, checking for images...');
 
     // Extract the generated image from the response
     const resultImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     const textResponse = data.choices?.[0]?.message?.content;
+
+    console.log('Has result image:', !!resultImage);
+    console.log('Text response:', textResponse);
 
     if (!resultImage) {
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Could not generate try-on result',
-          message: textResponse || 'Please try again with clearer images'
+          message: textResponse || 'The AI could not process these images. Please try with clearer photos - use a front-facing person photo and a clear clothing item image.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
