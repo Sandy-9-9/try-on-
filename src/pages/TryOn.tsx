@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Upload, Sparkles, ArrowLeft, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 const TryOn = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const clothInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
   
@@ -16,6 +17,14 @@ const TryOn = () => {
   const [modelImage, setModelImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Pre-fill cloth image from URL parameter
+  useEffect(() => {
+    const imageUrl = searchParams.get('image');
+    if (imageUrl) {
+      setClothImage(decodeURIComponent(imageUrl));
+    }
+  }, [searchParams]);
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
