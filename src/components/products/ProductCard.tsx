@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Eye, ShoppingBag } from 'lucide-react';
+import { Heart, Eye, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -17,8 +17,14 @@ interface ProductCardProps {
 export function ProductCard({ id, name, price, originalPrice, imageUrl, featured }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const navigate = useNavigate();
 
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+
+  const handleTryOn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(`/try-on?product=${id}&image=${encodeURIComponent(imageUrl)}`);
+  };
 
   return (
     <motion.div
@@ -70,11 +76,9 @@ export function ProductCard({ id, name, price, originalPrice, imageUrl, featured
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
-          <Link to={`/try-on?product=${id}`}>
-            <Button size="icon" className="rounded-full shadow-elegant">
-              <ShoppingBag className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button size="icon" className="rounded-full shadow-elegant" onClick={handleTryOn}>
+            <Sparkles className="h-4 w-4" />
+          </Button>
         </motion.div>
       </div>
 
