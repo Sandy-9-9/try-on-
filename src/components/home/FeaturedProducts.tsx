@@ -148,7 +148,7 @@ export function FeaturedProducts() {
 
                   {/* Price */}
                   <p className="text-lg font-semibold text-foreground mb-4">
-                    {product.price}/-
+                    ₹{product.price.toLocaleString('en-IN')}
                   </p>
 
                   {/* Action Buttons */}
