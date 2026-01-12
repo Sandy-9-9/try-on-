@@ -91,11 +91,11 @@ export function ProductCard({ id, name, price, originalPrice, imageUrl, featured
         </Link>
         <div className="flex items-center gap-2">
           <span className="font-display text-lg font-semibold text-foreground">
-            ${price.toFixed(2)}
+            ₹{price.toLocaleString('en-IN')}
           </span>
           {originalPrice && (
             <span className="text-sm text-muted-foreground line-through">
-              ${originalPrice.toFixed(2)}
+              ₹{originalPrice.toLocaleString('en-IN')}
             </span>
           )}
         </div>
