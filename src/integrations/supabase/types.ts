@@ -312,7 +312,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_order_from_cart: {
+        Args: { p_shipping_address?: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
