@@ -5,13 +5,18 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+type UserRole = 'admin' | 'customer';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,19 +35,69 @@ const Auth = () => {
       if (isSignUp) {
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) throw error;
+        
+        // After signup, we need to insert the role
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && selectedRole === 'admin') {
+          // Update the role to admin (default is customer via trigger)
+          await supabase
+            .from('user_roles')
+            .update({ role: 'admin' })
+            .eq('user_id', user.id);
+        }
+        
         toast({
           title: 'Account created!',
           description: 'Welcome to LuxeTry. Start exploring!',
         });
+        
+        if (selectedRole === 'admin') {
+          navigate('/admin/products');
+        } else {
+          navigate('/');
+        }
       } else {
         const { error } = await signIn(formData.email, formData.password);
         if (error) throw error;
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully signed in.',
-        });
+        
+        // Check user role and redirect accordingly
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          const userRole = roleData?.role;
+          
+          // For login, check if selected role matches their actual role
+          if (selectedRole === 'admin') {
+            if (userRole === 'admin') {
+              toast({
+                title: 'Welcome back, Admin!',
+                description: 'You have successfully signed in.',
+              });
+              navigate('/admin/products');
+            } else {
+              toast({
+                title: 'Access Denied',
+                description: 'You do not have admin privileges.',
+                variant: 'destructive',
+              });
+              await supabase.auth.signOut();
+              setLoading(false);
+              return;
+            }
+          } else {
+            toast({
+              title: 'Welcome back!',
+              description: 'You have successfully signed in.',
+            });
+            navigate('/');
+          }
+        }
       }
-      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -79,6 +134,29 @@ const Auth = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Role Selection */}
+            <div className="space-y-3">
+              <Label>Login as</Label>
+              <RadioGroup
+                value={selectedRole}
+                onValueChange={(value) => setSelectedRole(value as UserRole)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2 flex-1">
+                  <RadioGroupItem value="customer" id="customer" />
+                  <Label htmlFor="customer" className="cursor-pointer font-normal">
+                    Customer
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 flex-1">
+                  <RadioGroupItem value="admin" id="admin" />
+                  <Label htmlFor="admin" className="cursor-pointer font-normal">
+                    Admin
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             <AnimatePresence mode="wait">
               {isSignUp && (
                 <motion.div
@@ -137,7 +215,7 @@ const Auth = () => {
 
             <Button type="submit" className="w-full shadow-elegant" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              {isSignUp ? 'Create Account' : `Sign In as ${selectedRole === 'admin' ? 'Admin' : 'Customer'}`}
             </Button>
           </form>
 
