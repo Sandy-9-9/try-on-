@@ -15,6 +15,7 @@ import Cart from "./pages/Cart";
 import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import AdminProducts from "./pages/AdminProducts";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/admin/products" element={<AdminProducts />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
