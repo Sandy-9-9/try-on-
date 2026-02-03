@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,9 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'admin' | 'customer';
+type AuthMode = 'signin' | 'signup' | 'forgot-password';
 
 const Auth = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
@@ -27,12 +28,47 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.email) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Check your email',
+        description: 'We sent you a password reset link. Please check your inbox.',
+      });
+      setAuthMode('signin');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send reset email',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (authMode === 'signup') {
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) throw error;
         
@@ -109,6 +145,66 @@ const Auth = () => {
     }
   };
 
+  // Forgot password view
+  if (authMode === 'forgot-password') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative w-full max-w-md"
+        >
+          <div className="bg-card rounded-2xl shadow-elegant p-8">
+            <button
+              type="button"
+              onClick={() => setAuthMode('signin')}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Sign In
+            </button>
+
+            <div className="text-center mb-8">
+              <h1 className="font-display text-3xl font-bold text-foreground">
+                LUXE<span className="text-primary">TRY</span>
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Reset your password
+              </p>
+            </div>
+
+            <form onSubmit={handleForgotPassword} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  We'll send you a link to reset your password.
+                </p>
+              </div>
+
+              <Button type="submit" className="w-full shadow-elegant" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Reset Link
+              </Button>
+            </form>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
       {/* Background Elements */}
@@ -129,7 +225,7 @@ const Auth = () => {
               LUXE<span className="text-primary">TRY</span>
             </h1>
             <p className="text-muted-foreground mt-2">
-              {isSignUp ? 'Create your account' : 'Welcome back'}
+              {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
             </p>
           </div>
 
@@ -158,7 +254,7 @@ const Auth = () => {
             </div>
 
             <AnimatePresence mode="wait">
-              {isSignUp && (
+              {authMode === 'signup' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -172,7 +268,7 @@ const Auth = () => {
                     placeholder="Enter your name"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    required={isSignUp}
+                    required={authMode === 'signup'}
                   />
                 </motion.div>
               )}
@@ -191,7 +287,18 @@ const Auth = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {authMode === 'signin' && (
+                  <button
+                    type="button"
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    onClick={() => setAuthMode('forgot-password')}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -215,7 +322,7 @@ const Auth = () => {
 
             <Button type="submit" className="w-full shadow-elegant" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? 'Create Account' : `Sign In as ${selectedRole === 'admin' ? 'Admin' : 'Customer'}`}
+              {authMode === 'signup' ? 'Create Account' : `Sign In as ${selectedRole === 'admin' ? 'Admin' : 'Customer'}`}
             </Button>
           </form>
 
@@ -223,9 +330,9 @@ const Auth = () => {
             <button
               type="button"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
             >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              {authMode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
             </button>
           </div>
         </div>
