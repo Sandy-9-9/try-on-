@@ -7,8 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 interface Category {
   id: string;
   name: string;
-  description: string | null;
-  image_url: string | null;
 }
 
 const CategoriesPage = () => {
@@ -17,13 +15,27 @@ const CategoriesPage = () => {
 
   useEffect(() => {
     async function fetchCategories() {
-      const { data } = await supabase.from('categories').select('*');
+      const { data } = await supabase.from('categories').select('id, name');
       if (data) setCategories(data);
       setLoading(false);
     }
 
     fetchCategories();
   }, []);
+
+  // Predefined category options
+  const categoryOptions = [
+    { label: 'All', value: 'all' },
+    { label: 'Dresses', value: 'dresses' },
+    { label: 'Tops', value: 'tops' },
+    { label: 'Bottoms', value: 'bottoms' },
+  ];
+
+  // Merge predefined with database categories
+  const allOptions = [
+    { label: 'All', id: 'all' },
+    ...categories.map(cat => ({ label: cat.name, id: cat.id }))
+  ];
 
   return (
     <Layout>
@@ -38,51 +50,59 @@ const CategoriesPage = () => {
             Shop by Category
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore our curated collections across different styles and occasions.
+            Explore our curated collections across different styles.
           </p>
         </motion.div>
 
-        {/* Categories Grid */}
+        {/* Category Options */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-wrap justify-center gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="aspect-[16/9] bg-secondary/50 rounded-2xl animate-pulse" />
+              <div key={i} className="h-12 w-28 bg-secondary/50 rounded-full animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {categories.map((category, index) => (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            {allOptions.map((option, index) => (
               <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                key={option.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
               >
                 <Link
-                  to={`/shop?category=${category.id}`}
-                  className="group block relative aspect-[16/9] overflow-hidden rounded-2xl"
+                  to={option.id === 'all' ? '/shop' : `/shop?category=${option.id}`}
+                  className="inline-flex items-center justify-center px-8 py-3 rounded-full border-2 border-primary/20 bg-card text-foreground font-medium transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-lg"
                 >
-                  <img
-                    src={category.image_url || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800'}
-                    alt={category.name}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <h2 className="font-display text-3xl font-bold text-card mb-2">
-                      {category.name}
-                    </h2>
-                    {category.description && (
-                      <p className="text-card/90">
-                        {category.description}
-                      </p>
-                    )}
-                  </div>
+                  {option.label}
                 </Link>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
+
+        {/* Browse All CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-center mt-16"
+        >
+          <p className="text-muted-foreground mb-4">
+            Can't decide? Browse our entire collection
+          </p>
+          <Link
+            to="/shop"
+            className="inline-flex items-center justify-center px-10 py-4 rounded-full bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:shadow-xl hover:scale-105"
+          >
+            View All Products
+          </Link>
+        </motion.div>
       </div>
     </Layout>
   );
