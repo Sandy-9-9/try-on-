@@ -44,6 +44,7 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -60,17 +61,38 @@ const AdminProducts = () => {
   });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Check admin role and redirect non-admins
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
+    async function checkAdminRole() {
+      if (!user) {
+        if (!authLoading) {
+          navigate('/auth');
+        }
+        return;
+      }
+      
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.role !== 'admin') {
+        navigate('/');
+        return;
+      }
+      
+      setIsAdmin(true);
     }
+    
+    checkAdminRole();
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
+    if (user && isAdmin) {
       fetchData();
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -216,7 +238,7 @@ const AdminProducts = () => {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading || !user || isAdmin === null) {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
