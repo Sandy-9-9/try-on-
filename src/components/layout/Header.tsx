@@ -1,13 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Heart, User, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, Heart, User, Menu, X, Search, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, signOut } = useAuth();
+
+  useEffect(() => {
+    async function checkAdminRole() {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setIsAdmin(data?.role === 'admin');
+    }
+    
+    checkAdminRole();
+  }, [user]);
   const navigate = useNavigate();
 
   const navLinks = [
@@ -63,6 +84,13 @@ export function Header() {
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
+              {isAdmin && (
+                <Link to="/admin/products">
+                  <Button variant="ghost" size="icon">
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
             </>
           ) : (
             <Button 
@@ -107,13 +135,24 @@ export function Header() {
                 </Link>
               ))}
               {user && (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start p-0 text-sm font-medium text-muted-foreground hover:text-foreground"
-                  onClick={() => { signOut(); setIsMenuOpen(false); }}
-                >
-                  Sign Out
-                </Button>
+                <>
+                  {isAdmin && (
+                    <Link
+                      to="/admin/products"
+                      className="block text-sm font-medium text-muted-foreground hover:text-foreground"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Admin Products
+                    </Link>
+                  )}
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start p-0 text-sm font-medium text-muted-foreground hover:text-foreground"
+                    onClick={() => { signOut(); setIsMenuOpen(false); }}
+                  >
+                    Sign Out
+                  </Button>
+                </>
               )}
             </div>
           </motion.div>
