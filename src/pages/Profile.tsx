@@ -28,6 +28,7 @@ const Profile = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -49,6 +50,15 @@ const Profile = () => {
           address: data.address || '',
         });
       }
+      
+      // Check if user is admin
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setIsAdmin(roleData?.role === 'admin');
       setLoading(false);
     }
 
@@ -126,10 +136,12 @@ const Profile = () => {
               <p className="text-sm font-medium">Wishlist</p>
             </button>
             <button
-              className="bg-card p-4 rounded-xl shadow-soft hover:shadow-elegant transition-shadow text-center"
+              onClick={() => isAdmin && navigate('/admin/products')}
+              className={`bg-card p-4 rounded-xl shadow-soft hover:shadow-elegant transition-shadow text-center ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!isAdmin}
             >
               <Settings className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium">Settings</p>
+              <p className="text-sm font-medium">{isAdmin ? 'Admin Panel' : 'Settings'}</p>
             </button>
           </div>
 
