@@ -107,24 +107,13 @@ const Auth = () => {
           
           const userRole = roleData?.role;
           
-          // For login, check if selected role matches their actual role
-          if (selectedRole === 'admin') {
-            if (userRole === 'admin') {
-              toast({
-                title: 'Welcome back, Admin!',
-                description: 'You have successfully signed in.',
-              });
-              navigate('/admin/products');
-            } else {
-              toast({
-                title: 'Access Denied',
-                description: 'You do not have admin privileges.',
-                variant: 'destructive',
-              });
-              await supabase.auth.signOut();
-              setLoading(false);
-              return;
-            }
+          // Redirect based on actual user role
+          if (userRole === 'admin') {
+            toast({
+              title: 'Welcome back, Admin!',
+              description: 'You have successfully signed in.',
+            });
+            navigate('/admin/products');
           } else {
             toast({
               title: 'Welcome back!',
