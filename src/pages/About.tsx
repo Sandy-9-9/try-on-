@@ -40,7 +40,7 @@ const About = () => {
             <span className="block text-gradient-rose">Shop for Fashion</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            LuxeTry combines cutting-edge AI technology with premium fashion to create 
+            Attire combines cutting-edge AI technology with premium fashion to create 
             a shopping experience that's as confident as trying on clothes in person.
           </p>
         </motion.div>
@@ -62,7 +62,7 @@ const About = () => {
               match expectations when they arrive.
             </p>
             <p className="text-muted-foreground">
-              That's why we created LuxeTry. Our AI-powered virtual try-on technology bridges 
+              That's why we created Attire. Our AI-powered virtual try-on technology bridges 
               the gap between online and in-store shopping, helping you make decisions you'll 
               love.
             </p>
@@ -84,7 +84,7 @@ const About = () => {
           className="mb-20"
         >
           <h2 className="font-display text-3xl font-bold text-foreground text-center mb-12">
-            Why Choose LuxeTry
+            Why Choose Attire
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
@@ -121,7 +121,7 @@ const About = () => {
             Ready to Experience the Future of Fashion?
           </h2>
           <p className="text-muted-foreground mb-6">
-            Join thousands of happy customers who shop smarter with LuxeTry.
+            Join thousands of happy customers who shop smarter with Attire.
           </p>
         </motion.div>
       </div>

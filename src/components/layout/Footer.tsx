@@ -9,7 +9,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link to="/" className="inline-block">
               <span className="font-display text-2xl font-semibold text-foreground">
-                LUXE<span className="text-primary">TRY</span>
+                ATTIRE
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
@@ -49,7 +49,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} LuxeTry. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Attire. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -84,7 +84,7 @@ const Auth = () => {
         
         toast({
           title: 'Account created!',
-          description: 'Welcome to LuxeTry. Start exploring!',
+          description: 'Welcome to Attire. Start exploring!',
         });
         
         if (selectedRole === 'admin') {
@@ -160,7 +160,7 @@ const Auth = () => {
 
             <div className="text-center mb-8">
               <h1 className="font-display text-3xl font-bold text-foreground">
-                LUXE<span className="text-primary">TRY</span>
+                ATTIRE
               </h1>
               <p className="text-muted-foreground mt-2">
                 Reset your password
@@ -211,7 +211,7 @@ const Auth = () => {
           {/* Logo */}
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold text-foreground">
-              LUXE<span className="text-primary">TRY</span>
+              ATTIRE
             </h1>
             <p className="text-muted-foreground mt-2">
               {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
