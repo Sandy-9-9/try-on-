@@ -72,14 +72,10 @@ const Auth = () => {
         const { error } = await signUp(formData.email, formData.password, formData.fullName);
         if (error) throw error;
         
-        // After signup, we need to insert the role
+        // After signup, set the role using security definer function
         const { data: { user } } = await supabase.auth.getUser();
         if (user && selectedRole === 'admin') {
-          // Update the role to admin (default is customer via trigger)
-          await supabase
-            .from('user_roles')
-            .update({ role: 'admin' })
-            .eq('user_id', user.id);
+          await supabase.rpc('set_user_role', { p_user_id: user.id, p_role: 'admin' });
         }
         
         toast({
