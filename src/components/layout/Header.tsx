@@ -44,7 +44,7 @@ export function Header() {
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <span className="font-display text-2xl font-semibold text-foreground">
-            ATTIRE
+            FITFUSION
           </span>
         </Link>
 
