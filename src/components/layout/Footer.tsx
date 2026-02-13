@@ -9,11 +9,11 @@ export function Footer() {
           <div className="space-y-4">
             <Link to="/" className="inline-block">
               <span className="font-display text-2xl font-semibold text-foreground">
-                ATTIRE
+                FITFUSION
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Experience fashion like never before with our AI-powered virtual try-on technology.
+              Experience fashion like never before with FitFusion's AI-powered virtual try-on technology.
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Attire. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} FitFusion. All rights reserved.</p>
         </div>
       </div>
     </footer>

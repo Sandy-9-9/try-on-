@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Upload, Sparkles, ArrowLeft, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,6 +18,7 @@ const TryOn = () => {
   const [modelImage, setModelImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   // Pre-fill cloth image from URL parameter
   useEffect(() => {
@@ -53,6 +55,18 @@ const TryOn = () => {
     
     setIsProcessing(true);
     setResultImage(null);
+    setProgress(0);
+
+    // Simulate progress while waiting for API
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + Math.random() * 12;
+      });
+    }, 500);
     
     try {
       const { data, error } = await supabase.functions.invoke('virtual-try-on', {
@@ -73,7 +87,9 @@ const TryOn = () => {
       console.error('Try-on error:', error);
       toast.error(error.message || 'Failed to process. Please try again.');
     } finally {
-      setIsProcessing(false);
+      clearInterval(progressInterval);
+      setProgress(100);
+      setTimeout(() => setIsProcessing(false), 300);
     }
   };
 
@@ -228,10 +244,11 @@ const TryOn = () => {
               </h2>
               <div className="bg-secondary/30 rounded-xl p-8 min-h-[300px] flex items-center justify-center">
                 {isProcessing ? (
-                  <div className="flex flex-col items-center gap-4">
+                  <div className="flex flex-col items-center gap-4 w-full max-w-xs">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+                    <Progress value={progress} className="w-full" />
                     <p className="text-muted-foreground">
-                      Creating your virtual try-on...
+                      Creating your virtual try-on... {Math.round(progress)}%
                     </p>
                   </div>
                 ) : resultImage ? (
