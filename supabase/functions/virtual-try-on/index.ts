@@ -30,8 +30,8 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data, error: authError } = await supabaseClient.auth.getClaims(token);
-    if (authError || !data?.claims) {
+    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token);
+    if (authError || !claimsData?.claims) {
       console.log('Auth error:', authError?.message || 'No claims found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid or expired session' }),
@@ -39,7 +39,7 @@ serve(async (req) => {
       );
     }
 
-    const userId = data.claims.sub;
+    const userId = claimsData.claims.sub;
     console.log('Authenticated user:', userId);
 
     const { clothImage, modelImage } = await req.json();
