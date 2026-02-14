@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     // Validate authentication
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       console.log('No authorization header provided');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Please sign in to use virtual try-on' }),
@@ -29,16 +29,18 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      console.log('Auth error:', authError?.message || 'No user found');
+    const token = authHeader.replace('Bearer ', '');
+    const { data, error: authError } = await supabaseClient.auth.getClaims(token);
+    if (authError || !data?.claims) {
+      console.log('Auth error:', authError?.message || 'No claims found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid or expired session' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', user.id);
+    const userId = data.claims.sub;
+    console.log('Authenticated user:', userId);
 
     const { clothImage, modelImage } = await req.json();
     
