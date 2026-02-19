@@ -29,17 +29,16 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token);
-    if (authError || !claimsData?.claims) {
-      console.log('Auth error:', authError?.message || 'No claims found');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.log('Auth error:', authError?.message || 'No user found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid or expired session' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
     console.log('Authenticated user:', userId);
 
     const { clothImage, modelImage } = await req.json();
