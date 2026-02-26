@@ -13,33 +13,19 @@ serve(async (req) => {
   }
 
   try {
-    // Validate authentication
+    // Optional authentication - log user if available
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.log('No authorization header provided');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Please sign in to use virtual try-on' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    let userId = 'anonymous';
+    if (authHeader?.startsWith('Bearer ')) {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
       );
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) userId = user.id;
     }
-
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      console.log('Auth error:', authError?.message || 'No user found');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid or expired session' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const userId = user.id;
-    console.log('Authenticated user:', userId);
+    console.log('User:', userId);
 
     const { clothImage, modelImage } = await req.json();
     

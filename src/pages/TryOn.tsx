@@ -6,12 +6,10 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const TryOn = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const clothInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -21,14 +19,6 @@ const TryOn = () => {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-
-  // Redirect unauthenticated users to sign in
-  useEffect(() => {
-    if (!loading && !user) {
-      toast.error('Please sign in to use the Virtual Try-On feature');
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
 
   // Pre-fill cloth image from URL parameter
   useEffect(() => {
