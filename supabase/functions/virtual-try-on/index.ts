@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -36,12 +36,17 @@ serve(async (req) => {
       );
     }
 
+    console.log('Cloth image size:', Math.round(clothImage.length / 1024), 'KB');
+    console.log('Model image size:', Math.round(modelImage.length / 1024), 'KB');
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Use the next-gen image model with a very specific virtual try-on prompt
+    console.log('Calling AI Gateway with gemini-3.1-flash-image-preview...');
+
+    // Use the fast image model for quicker generation
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -49,37 +54,22 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-pro-image-preview',
+        model: 'google/gemini-3.1-flash-image-preview',
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `VIRTUAL TRY-ON TASK: You must generate a NEW image showing the person from the SECOND image wearing the clothing item from the FIRST image.
-
-CRITICAL INSTRUCTIONS:
-1. The FIRST image contains a CLOTHING ITEM (shirt, dress, jacket, etc.) - extract this garment
-2. The SECOND image contains a PERSON/MODEL - keep their face, body pose, skin tone, and background
-3. Generate a NEW composite image where the PERSON is wearing the CLOTHING ITEM
-4. The clothing must be realistically fitted to the person's body shape and pose
-5. Preserve the person's face, hair, arms, and legs exactly as they appear
-6. Match lighting and shadows between the garment and person
-7. The result should look like a professional fashion photo of this person wearing this exact outfit
-
-DO NOT just return one of the input images. You MUST create a merged/composite result showing the person wearing the garment.`
+                text: `VIRTUAL TRY-ON: Generate a NEW image showing the person from the second image wearing the clothing from the first image. Keep the person's face, pose, and body exactly the same. Fit the clothing realistically to their body. The result must be a single photo of the person wearing the garment.`
               },
               {
                 type: 'image_url',
-                image_url: {
-                  url: clothImage
-                }
+                image_url: { url: clothImage }
               },
               {
                 type: 'image_url',
-                image_url: {
-                  url: modelImage
-                }
+                image_url: { url: modelImage }
               }
             ]
           }
@@ -88,19 +78,21 @@ DO NOT just return one of the input images. You MUST create a merged/composite r
       }),
     });
 
+    console.log('AI Gateway status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI Gateway error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          JSON.stringify({ success: false, message: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
+          JSON.stringify({ success: false, message: 'AI credits exhausted. Please try again later.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -109,32 +101,25 @@ DO NOT just return one of the input images. You MUST create a merged/composite r
     }
 
     const data = await response.json();
-    console.log('AI Gateway response received, checking for images...');
+    console.log('AI Gateway response received');
 
-    // Extract the generated image from the response
     const resultImage = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     const textResponse = data.choices?.[0]?.message?.content;
 
     console.log('Has result image:', !!resultImage);
-    console.log('Text response:', textResponse);
 
     if (!resultImage) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Could not generate try-on result',
-          message: textResponse || 'The AI could not process these images. Please try with clearer photos - use a front-facing person photo and a clear clothing item image.'
+          message: textResponse || 'Could not generate try-on result. Please try with clearer photos.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        resultImage,
-        message: textResponse 
-      }),
+      JSON.stringify({ success: true, resultImage, message: textResponse }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -142,7 +127,7 @@ DO NOT just return one of the input images. You MUST create a merged/composite r
     console.error('Error in virtual-try-on function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ success: false, message: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
