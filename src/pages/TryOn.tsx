@@ -30,6 +30,28 @@ const TryOn = () => {
     }
   }, [searchParams]);
 
+  // Compress image to reduce payload size and speed up processing
+  const compressImage = (dataUrl: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
     setImage: (img: string | null) => void
@@ -41,9 +63,11 @@ const TryOn = () => {
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImage(e.target?.result as string);
-        setResultImage(null); // Clear previous result
+      reader.onload = async (e) => {
+        const raw = e.target?.result as string;
+        const compressed = await compressImage(raw);
+        setImage(compressed);
+        setResultImage(null);
       };
       reader.readAsDataURL(file);
     }
@@ -59,24 +83,41 @@ const TryOn = () => {
     setResultImage(null);
     setProgress(0);
 
-    // Simulate progress while waiting for API
+    // Slower progress to account for longer AI processing
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) {
           clearInterval(progressInterval);
           return 90;
         }
-        return prev + Math.random() * 12;
+        return prev + Math.random() * 5;
       });
-    }, 500);
+    }, 1000);
     
     try {
-      const { data, error } = await supabase.functions.invoke('virtual-try-on', {
-        body: { clothImage, modelImage }
-      });
+      // Use fetch directly with longer timeout instead of supabase.functions.invoke
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
 
-      if (error) {
-        throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/virtual-try-on`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ clothImage, modelImage }),
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Server error');
       }
 
       if (data.success && data.resultImage) {
@@ -87,7 +128,11 @@ const TryOn = () => {
       }
     } catch (error: any) {
       console.error('Try-on error:', error);
-      toast.error(error.message || 'Failed to process. Please try again.');
+      if (error.name === 'AbortError') {
+        toast.error('Request timed out. Please try with smaller or clearer images.');
+      } else {
+        toast.error(error.message || 'Failed to process. Please try again.');
+      }
     } finally {
       clearInterval(progressInterval);
       setProgress(100);
