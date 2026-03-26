@@ -266,6 +266,27 @@ const TryOn = () => {
                 )}
               </div>
             </motion.div>
+
+            {/* Sign-in prompt for guests */}
+            {!user && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 flex items-center justify-center gap-3 rounded-lg border border-border bg-muted/40 px-5 py-3"
+              >
+                <LogIn className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <button
+                    onClick={() => navigate('/auth')}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign in
+                  </button>{' '}
+                  to save your try-on results and view them later.
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </div>
