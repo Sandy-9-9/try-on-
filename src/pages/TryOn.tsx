@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 const TryOn = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const clothInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
