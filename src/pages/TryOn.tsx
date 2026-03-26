@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Upload, Sparkles, ArrowLeft, X } from 'lucide-react';
+import { Upload, Sparkles, ArrowLeft, X, LogIn } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const TryOn = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const clothInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -264,6 +266,27 @@ const TryOn = () => {
                 )}
               </div>
             </motion.div>
+
+            {/* Sign-in prompt for guests */}
+            {!user && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 flex items-center justify-center gap-3 rounded-lg border border-border bg-muted/40 px-5 py-3"
+              >
+                <LogIn className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <button
+                    onClick={() => navigate('/auth')}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign in
+                  </button>{' '}
+                  to save your try-on results and view them later.
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </div>
