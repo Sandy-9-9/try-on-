@@ -29,13 +29,12 @@ const Cart = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+    if (user) {
+      fetchCartItems();
+    } else {
+      setLoading(false);
     }
-
-    fetchCartItems();
-  }, [user, navigate]);
+  }, [user]);
 
   const fetchCartItems = async () => {
     if (!user) return;

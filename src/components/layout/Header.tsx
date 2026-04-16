@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Heart, User, Menu, X, Search, Settings } from 'lucide-react';
+import { ShoppingBag, Heart, Menu, X, Search, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function checkAdminRole() {
@@ -29,7 +29,6 @@ export function Header() {
     
     checkAdminRole();
   }, [user]);
-  const navigate = useNavigate();
 
   const navLinks = [
     { name: 'Shop', href: '/shop' },
@@ -67,39 +66,22 @@ export function Header() {
             <Search className="h-5 w-5" />
           </Button>
           
-          {user ? (
-            <>
-              <Link to="/wishlist">
-                <Button variant="ghost" size="icon">
-                  <Heart className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link to="/cart">
-                <Button variant="ghost" size="icon">
-                  <ShoppingBag className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link to="/profile">
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
-              {isAdmin && (
-                <Link to="/admin/products">
-                  <Button variant="ghost" size="icon">
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                </Link>
-              )}
-            </>
-          ) : (
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => navigate('/auth')}
-            >
-              Sign In
+          <Link to="/wishlist">
+            <Button variant="ghost" size="icon">
+              <Heart className="h-5 w-5" />
             </Button>
+          </Link>
+          <Link to="/cart">
+            <Button variant="ghost" size="icon">
+              <ShoppingBag className="h-5 w-5" />
+            </Button>
+          </Link>
+          {isAdmin && (
+            <Link to="/admin/products">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
           )}
 
           {/* Mobile Menu Toggle */}
@@ -134,25 +116,14 @@ export function Header() {
                   {link.name}
                 </Link>
               ))}
-              {user && (
-                <>
-                  {isAdmin && (
-                    <Link
-                      to="/admin/products"
-                      className="block text-sm font-medium text-muted-foreground hover:text-foreground"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Admin Products
-                    </Link>
-                  )}
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start p-0 text-sm font-medium text-muted-foreground hover:text-foreground"
-                    onClick={() => { signOut(); setIsMenuOpen(false); }}
-                  >
-                    Sign Out
-                  </Button>
-                </>
+              {isAdmin && (
+                <Link
+                  to="/admin/products"
+                  className="block text-sm font-medium text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin Products
+                </Link>
               )}
             </div>
           </motion.div>

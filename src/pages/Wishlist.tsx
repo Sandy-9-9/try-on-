@@ -27,13 +27,12 @@ const Wishlist = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+    if (user) {
+      fetchWishlist();
+    } else {
+      setLoading(false);
     }
-
-    fetchWishlist();
-  }, [user, navigate]);
+  }, [user]);
 
   const fetchWishlist = async () => {
     if (!user) return;

@@ -32,7 +32,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      setLoading(false);
       return;
     }
 
